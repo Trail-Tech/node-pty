@@ -26,9 +26,7 @@
           'src/unix/pty.cc'
         ],
         'libraries': [
-          '-lutil',
-          '-L/usr/lib',
-          '-L/usr/local/lib'
+          '-lutil'
         ],
       }],
       # http://www.gnu.org/software/gnulib/manual/html_node/forkpty.html
