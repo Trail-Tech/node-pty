@@ -2,15 +2,15 @@
   "name": "node-pty",
   "description": "Fork pseudoterminals in Node.JS",
   "author": {
-    "name": "Daniel Imms"
+    "name": "Jeremy Prater"
   },
-  "version": "0.6.8",
+  "version": "1.0.0",
   "license": "MIT",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
   "repository": {
     "type": "git",
-    "url": "git://github.com/Tyriar/node-pty.git"
+    "url": "git://github.com/Trail-Tech/node-pty.git"
   },
   "files": [
     "binding.gyp",
@@ -19,9 +19,9 @@
     "src/",
     "deps/"
   ],
-  "homepage": "https://github.com/Tyriar/node-pty",
+  "homepage": "https://github.com/Trail-Tech/node-pty",
   "bugs": {
-    "url": "https://github.com/Tyriar/node-pty/issues"
+    "url": "https://github.com/Trail-Tech/node-pty/issues"
   },
   "keywords": [
     "pty",
