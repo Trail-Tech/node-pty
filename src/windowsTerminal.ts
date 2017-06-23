@@ -9,6 +9,7 @@ import { inherits } from 'util';
 import { Terminal } from './terminal';
 import { WindowsPtyAgent } from './windowsPtyAgent';
 import { IPtyForkOptions, IPtyOpenOptions } from './interfaces';
+import { ArgvOrCommandLine } from './types';
 import { assign } from './utils';
 
 const DEFAULT_FILE = 'cmd.exe';
@@ -19,8 +20,12 @@ export class WindowsTerminal extends Terminal {
   private deferreds: any[];
   private agent: WindowsPtyAgent;
 
-  constructor(file?: string, args?: string[], opt?: IPtyForkOptions) {
-    super();
+  constructor(file?: string, args?: ArgvOrCommandLine, opt?: IPtyForkOptions) {
+    super(opt);
+
+    if (opt.encoding) {
+      console.warn('Setting encoding on Windows is not supported');
+    }
 
     // Initialize arguments
     args = args || [];
@@ -46,7 +51,7 @@ export class WindowsTerminal extends Terminal {
     this.socket = this.agent.outSocket;
 
     // Not available until `ready` event emitted.
-    this.pid = this.agent.pid;
+    this.pid = this.agent.innerPid;
     this.fd = this.agent.fd;
     this.pty = this.agent.pty;
 

@@ -5,6 +5,7 @@
 
 import * as net from 'net';
 import * as path from 'path';
+import { ArgvOrCommandLine } from './types';
 
 const pty = require(path.join('..', 'build', 'Release', 'pty.node'));
 
@@ -20,18 +21,21 @@ export class WindowsPtyAgent {
   private _inSocket: net.Socket;
   private _outSocket: net.Socket;
   private _pid: number;
+  private _innerPid: number;
+  private _innerPidHandle: number;
+
   private _fd: any;
   private _pty: number;
 
   public get inSocket(): net.Socket { return this._inSocket; }
   public get outSocket(): net.Socket { return this._outSocket; }
-  public get pid(): number { return this._pid; }
   public get fd(): any { return this._fd; }
+  public get innerPid(): number { return this._innerPid; }
   public get pty(): number { return this._pty; }
 
   constructor(
     file: string,
-    args: string[],
+    args: ArgvOrCommandLine,
     env: string[],
     cwd: string,
     cols: number,
@@ -42,15 +46,15 @@ export class WindowsPtyAgent {
     cwd = path.resolve(cwd);
 
     // Compose command line
-    const cmdline = [file];
-    Array.prototype.push.apply(cmdline, args);
-    const cmdlineFlat = argvToCommandLine(cmdline);
+    const commandLine = argsToCommandLine(file, args);
 
     // Open pty session.
-    const term = pty.startProcess(file, cmdlineFlat, env, cwd, cols, rows, debug);
+    const term = pty.startProcess(file, commandLine, env, cwd, cols, rows, debug);
 
     // Terminal pid.
     this._pid = term.pid;
+    this._innerPid = term.innerPid;
+    this._innerPidHandle = term.innerPidHandle;
 
     // Not available on windows.
     this._fd = term.fd;
@@ -76,7 +80,7 @@ export class WindowsPtyAgent {
   }
 
   public resize(cols: number, rows: number): void {
-    pty.resize(this.pid, cols, rows);
+    pty.resize(this._pid, cols, rows);
   }
 
   public kill(): void {
@@ -84,14 +88,22 @@ export class WindowsPtyAgent {
     this._inSocket.writable = false;
     this._outSocket.readable = false;
     this._outSocket.writable = false;
-    pty.kill(this.pid);
+    pty.kill(this._pid, this._innerPidHandle);
   }
 }
 
 // Convert argc/argv into a Win32 command-line following the escaping convention
 // documented on MSDN (e.g. see CommandLineToArgvW documentation). Copied from
 // winpty project.
-export function argvToCommandLine(argv: string[]): string {
+export function argsToCommandLine(file: string, args: ArgvOrCommandLine): string {
+  if (isCommandLine(args)) {
+    if (args.length === 0) {
+      return file;
+    }
+    return `${argsToCommandLine(file, [])} ${args}`;
+  }
+  const argv = [file];
+  Array.prototype.push.apply(argv, args);
   let result = '';
   for (let argIndex = 0; argIndex < argv.length; argIndex++) {
     if (argIndex > 0) {
@@ -128,6 +140,10 @@ export function argvToCommandLine(argv: string[]): string {
     }
   }
   return result;
+}
+
+function isCommandLine(args: ArgvOrCommandLine): args is string {
+  return typeof args === 'string';
 }
 
 function repeatText(text: string, count: number): string {

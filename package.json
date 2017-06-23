@@ -4,9 +4,10 @@
   "author": {
     "name": "Daniel Imms"
   },
-  "version": "0.6.2",
+  "version": "0.6.8",
   "license": "MIT",
   "main": "./lib/index.js",
+  "types": "./lib/index.d.ts",
   "repository": {
     "type": "git",
     "url": "git://github.com/Tyriar/node-pty.git"

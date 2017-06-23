@@ -8,6 +8,7 @@ import * as path from 'path';
 import * as tty from 'tty';
 import { Terminal } from './terminal';
 import { ProcessEnv, IPtyForkOptions, IPtyOpenOptions } from './interfaces';
+import { ArgvOrCommandLine } from './types';
 import { assign } from './utils';
 
 const pty = require(path.join('..', 'build', 'Release', 'pty.node'));
@@ -31,8 +32,12 @@ export class UnixTerminal extends Terminal {
   private master: any;
   private slave: any;
 
-  constructor(file?: string, args?: string[], opt?: IPtyForkOptions) {
-    super();
+  constructor(file?: string, args?: ArgvOrCommandLine, opt?: IPtyForkOptions) {
+    super(opt);
+
+    if (typeof args === 'string') {
+      throw new Error('args as a string is not supported on unix.');
+    }
 
     // Initialize arguments
     args = args || [];
@@ -55,6 +60,8 @@ export class UnixTerminal extends Terminal {
     env.TERM = name;
     const parsedEnv = this._parseEnv(env);
 
+    const encoding = (opt.encoding === undefined ? 'utf8' : opt.encoding);
+
     const onexit = (code: any, signal: any) => {
       // XXX Sometimes a data event is emitted after exit. Wait til socket is
       // destroyed.
@@ -68,10 +75,12 @@ export class UnixTerminal extends Terminal {
     };
 
     // fork
-    const term = pty.fork(file, args, parsedEnv, cwd, cols, rows, uid, gid, onexit);
+    const term = pty.fork(file, args, parsedEnv, cwd, cols, rows, uid, gid, (encoding === 'utf8'), onexit);
 
     this.socket = new PipeSocket(term.fd);
-    this.socket.setEncoding('utf8');
+    if (encoding !== null) {
+      this.socket.setEncoding(encoding);
+    }
     this.socket.resume();
 
     // setup
@@ -144,16 +153,17 @@ export class UnixTerminal extends Terminal {
 
     const cols = opt.cols || Terminal.DEFAULT_COLS;
     const rows = opt.rows || Terminal.DEFAULT_ROWS;
+    const encoding = opt.encoding ? 'utf8' : opt.encoding;
 
     // open
     const term = pty.open(cols, rows);
 
     self.master = new PipeSocket(term.master);
-    self.master.setEncoding('utf8');
+    self.master.setEncoding(encoding);
     self.master.resume();
 
     self.slave = new PipeSocket(term.slave);
-    self.slave.setEncoding('utf8');
+    self.slave.setEncoding(encoding);
     self.slave.resume();
 
     self.socket = self.master;

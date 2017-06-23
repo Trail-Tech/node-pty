@@ -139,13 +139,13 @@ pty_after_close(uv_handle_t *);
 
 /**
  * PtyFork
- * pty.fork(file, args, env, cwd, cols, rows, uid, gid, onexit)
+ * pty.fork(file, args, env, cwd, cols, rows, uid, gid, utf8, onexit)
  */
 
 NAN_METHOD(PtyFork) {
   Nan::HandleScope scope;
 
-  if (info.Length() != 9
+  if (info.Length() != 10
       || !info[0]->IsString() // file
       || !info[1]->IsArray() // args
       || !info[2]->IsArray() // env
@@ -154,10 +154,11 @@ NAN_METHOD(PtyFork) {
       || !info[5]->IsNumber() // rows
       || !info[6]->IsNumber() // uid
       || !info[7]->IsNumber() // gid
-      || !info[8]->IsFunction() // onexit
+      || !info[8]->IsBoolean() // utf8
+      || !info[9]->IsFunction() // onexit
   ) {
     return Nan::ThrowError(
-      "Usage: pty.fork(file, args, env, cwd, cols, rows, uid, gid, onexit)");
+      "Usage: pty.fork(file, args, env, cwd, cols, rows, uid, gid, utf8, onexit)");
   }
 
   // Make sure the process still listens to SIGINT
@@ -202,8 +203,16 @@ NAN_METHOD(PtyFork) {
   winp.ws_ypixel = 0;
 
   // termios
-  struct termios* term = new termios();
-  term->c_iflag = ICRNL | IXON | IXANY | IMAXBEL | BRKINT | IUTF8;
+  struct termios t = termios();
+  struct termios *term = &t;
+  term->c_iflag = ICRNL | IXON | IXANY | IMAXBEL | BRKINT;
+  if (info[8]->ToBoolean()->Value()) {
+#if defined(IUTF8)
+    term->c_iflag |= IUTF8;
+#else
+    term->c_iflag |= UTF8;
+#endif
+  }
   term->c_oflag = OPOST | ONLCR;
   term->c_cflag = CREAD | CS8 | HUPCL;
   term->c_lflag = ICANON | ISIG | IEXTEN | ECHO | ECHOE | ECHOK | ECHOKE | ECHOCTL;
@@ -230,8 +239,8 @@ NAN_METHOD(PtyFork) {
   term->c_cc[VSTATUS] = 20;
   #endif
 
-  term->c_ispeed = B38400;
-  term->c_ospeed = B38400;
+  cfsetispeed(term, B38400);
+  cfsetospeed(term, B38400);
 
   // uid / gid
   int uid = info[6]->IntegerValue();
@@ -239,8 +248,7 @@ NAN_METHOD(PtyFork) {
 
   // fork the pty
   int master = -1;
-  char name[40];
-  pid_t pid = pty_forkpty(&master, name, term, &winp);
+  pid_t pid = pty_forkpty(&master, nullptr, term, &winp);
 
   if (pid) {
     for (i = 0; i < argl; i++) free(argv[i]);
@@ -290,12 +298,12 @@ NAN_METHOD(PtyFork) {
         Nan::New<Number>(pid));
       Nan::Set(obj,
         Nan::New<String>("pty").ToLocalChecked(),
-        Nan::New<String>(name).ToLocalChecked());
+        Nan::New<String>(ptsname(master)).ToLocalChecked());
 
       pty_baton *baton = new pty_baton();
       baton->exit_code = 0;
       baton->signal_code = 0;
-      baton->cb.Reset(Local<Function>::Cast(info[8]));
+      baton->cb.Reset(Local<Function>::Cast(info[9]));
       baton->pid = pid;
       baton->async.data = baton;
 
@@ -332,8 +340,7 @@ NAN_METHOD(PtyOpen) {
 
   // pty
   int master, slave;
-  char name[40];
-  int ret = pty_openpty(&master, &slave, name, NULL, &winp);
+  int ret = pty_openpty(&master, &slave, nullptr, NULL, &winp);
 
   if (ret == -1) {
     return Nan::ThrowError("openpty(3) failed.");
@@ -356,7 +363,7 @@ NAN_METHOD(PtyOpen) {
     Nan::New<Number>(slave));
   Nan::Set(obj,
     Nan::New<String>("pty").ToLocalChecked(),
-    Nan::New<String>(name).ToLocalChecked());
+    Nan::New<String>(ptsname(master)).ToLocalChecked());
 
   return info.GetReturnValue().Set(obj);
 }

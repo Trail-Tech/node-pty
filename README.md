@@ -11,6 +11,16 @@ This is useful for:
 
 `node-pty` supports Linux, macOS and Windows. Windows support is possible by utilizing the [winpty](https://github.com/rprichard/winpty) library.
 
+## Real-world Uses
+
+`node-pty` powers many different terminal emulators, including:
+
+- [Microsoft Visual Studio Code](code.visualstudio.com)
+- [Hyper](https://hyper.is/)
+- [Upterm](https://github.com/railsware/upterm)
+
+Do you use node-pty in your application as well? Please open a [Pull Request](https://github.com/Tyriar/node-pty/pulls) to include it here. We would love to have it in our list.
+
 ## Example Usage
 
 ```js
