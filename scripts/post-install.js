@@ -18,6 +18,7 @@ cleanFolderRecursive = function(folder) {
         cleanFolderRecursive(curPath);
         fs.rmdirSync(curPath);
       } else if (BUILD_FILES.indexOf(curPath) < 0){ // delete file
+        console.log ('unlinking: ' + curPath);
         fs.unlinkSync(curPath);
       }
     });
